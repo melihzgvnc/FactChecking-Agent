@@ -3,7 +3,7 @@
 from typing import TypedDict, Annotated, Literal
 import operator
 
-from .reducer import overwrite_reducer
+from graph.reducer import overwrite_reducer
 
 # Main Graph State
 class FactCheckState(TypedDict):

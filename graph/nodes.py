@@ -1,6 +1,18 @@
+"""Graph nodes definitions"""
+
 from graph.states import FactCheckState, InternalMapState, OutputMapState
 from model.decomposer import decomposer_model
 from model.judge import judge_model
+from prompts.prompts import DECOMPOSER_PROMPT, JUDGE_PROMPT
+
+from langchain_tavily import TavilySearch
+from langgraph.types import Send
+
+from dotenv import load_dotenv
+import os
+
+load_dotenv()
+os.environ['TAVILY_API_KEY'] = os.environ.get('TAVILY_API_KEY')
 
 # ---- Sub-Graph Nodes ----
 
@@ -16,6 +28,7 @@ def retrieve_evidence(state: InternalMapState):
     
     return {'retrieved_evidences': [content]}
 
+
 def judge_claim(state: InternalMapState) -> OutputMapState:
     """Check claim against evidence and decide on verdict"""
 
@@ -23,7 +36,7 @@ def judge_claim(state: InternalMapState) -> OutputMapState:
     retrieved_evidences = state['retrieved_evidences']
     retry_count = state['retry_count'] + 1
     
-    formatted_prompt = CLAIM_JUDGE_PROMPT.format(sub_claim=sub_claim, evidence=retrieved_evidences[0])
+    formatted_prompt = JUDGE_PROMPT.format(sub_claim=sub_claim, evidence=retrieved_evidences[0])
     input_msg = HumanMessage(content=formatted_prompt)
     
     response = judge_model.invoke([input_msg]) # returns verdict, confidence score and grounding sentence (ClaimCheck object)
@@ -40,6 +53,7 @@ def ingest_claim(state: FactCheckState):
 
     return {'raw_claim': normalized_claim}
 
+
 def decompose_claims(state: FactCheckState):
 
     claim = state['raw_claim']
@@ -50,6 +64,7 @@ def decompose_claims(state: FactCheckState):
     response = decomposer_model.invoke([input_msg])
     
     return {'sub_claims': response.sub_claims}
+
 
 def aggregate_verdicts(state: FactCheckState):
     """Aggregate results into a single score"""
@@ -74,6 +89,7 @@ def aggregate_verdicts(state: FactCheckState):
     overall_confidence = sum_confidence / len(judge_results)
     
     return {'verdict': overall_verdict, 'confidence': overall_confidence}
+
 
 def format_output(state: FactCheckState):
     """Format output and present findings"""
