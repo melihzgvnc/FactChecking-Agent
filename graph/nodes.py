@@ -4,26 +4,17 @@ from graph.states import FactCheckState, InternalMapState, OutputMapState
 from model.decomposer import decomposer_model
 from model.judge import judge_model
 from prompts.prompts import DECOMPOSER_PROMPT, JUDGE_PROMPT
+from retrieval.web_search import web_search
 
-from langchain_tavily import TavilySearch
-from langgraph.types import Send
-
-from dotenv import load_dotenv
-import os
-
-load_dotenv()
-os.environ['TAVILY_API_KEY'] = os.environ.get('TAVILY_API_KEY')
 
 # ---- Sub-Graph Nodes ----
 
 def retrieve_evidence(state: InternalMapState):
     """Search web and retrieve context regarding provided claim"""    
+
     sub_claim = state['sub_claim']
 
-    tavily_search = TavilySearch(max_results=1, include_images=False)
-
-    search_results = tavily_search.invoke(sub_claim)['results']
-
+    search_results = web_search.invoke(sub_claim)['results']
     content = "\n".join([result['content'] for result in search_results])
     
     return {'retrieved_evidences': [content]}
