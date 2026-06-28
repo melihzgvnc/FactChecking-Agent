@@ -54,7 +54,7 @@ def ingest_claim(state: FactCheckState):
     return {'raw_claim': normalized_claim}
 
 
-def decompose_claims(state: FactCheckState):
+def decompose_claim(state: FactCheckState):
 
     claim = state['raw_claim']
 
