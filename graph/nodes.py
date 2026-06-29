@@ -6,6 +6,7 @@ from model.judge import judge_model
 from prompts.prompts import DECOMPOSER_PROMPT, JUDGE_PROMPT
 from retrieval.web_search import web_search
 
+from langchain_core.messages import HumanMessage
 
 # ---- Sub-Graph Nodes ----
 
