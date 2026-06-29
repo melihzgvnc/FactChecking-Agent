@@ -18,9 +18,12 @@ def check_confidence(state: FactCheckState) -> Literal['sub_graph', 'aggregate_v
     retry_count = state['retry_count']
 
     if retry_count <= 2:
-        
-        [Send('sub_graph', {'sub_claim': list(result.keys())[0], 'retry_count': retry_count}) 
-         for result in judge_results 
-         if list(result.values())[0].confidence < 0.5]
-            
+        retries = [
+            Send('sub_graph', {'sub_claim': list(result.keys())[0], 'retry_count': retry_count}) 
+            for result in judge_results 
+            if list(result.values())[0].confidence < 0.5
+        ]
+        if retries:
+            return retries
+
     return 'aggregate_verdicts'
