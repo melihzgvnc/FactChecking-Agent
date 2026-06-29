@@ -10,6 +10,8 @@ from retrieval.web_search import web_search
 import requests
 import time
 import random
+from pydantic import ValidationError
+from langchain_core.exceptions import OutputParserException
 from langchain_core.messages import HumanMessage
 
 # ---- Sub-Graph Nodes ----
@@ -26,7 +28,7 @@ def retrieve_evidence(state: InternalMapState):
         try:
             search_results = web_search.invoke(sub_claim)['results']
             if len(search_results) == 0:
-                    return {'retrieved_evidences': []}
+                return {'retrieved_evidences': []}
             
             content = "\n".join([result['content'] for result in search_results])
             
@@ -57,9 +59,17 @@ def judge_claim(state: InternalMapState) -> OutputMapState:
     formatted_prompt = JUDGE_PROMPT.format(sub_claim=sub_claim, evidence=retrieved_evidences[0])
     input_msg = HumanMessage(content=formatted_prompt)
     
-    response = judge_model.invoke([input_msg]) # returns verdict, confidence score and grounding sentence (ClaimCheck object)
-    
-    return {'judge_results': [{sub_claim: response}], 'retry_count': retry_count, 'retrieved_evidences': retrieved_evidences}
+    try:
+        response = judge_model.invoke([input_msg]) # returns verdict, confidence score and grounding sentence (ClaimCheck object)
+    except (ValidationError, OutputParserException):
+        response = ClaimCheck(
+            verdict='insufficient evidence',
+            confidence=1.0
+        )
+        return {'judge_results': [{sub_claim: response}], 'retry_count': retry_count}
+
+
+    return {'judge_results': [{sub_claim: response}], 'retry_count': retry_count}
 
 
 # ---- Main Graph Nodes -----
