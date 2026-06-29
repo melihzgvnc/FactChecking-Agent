@@ -1,0 +1,18 @@
+# Agent orchestration
+langgraph==1.2.6
+langchain-core==1.4.8
+
+# Models
+langchain-openai==1.3.3
+langchain-ollama==1.1.0
+
+# Retrieval
+langchain-tavily==0.2.18
+
+# API / serving
+fastapi==0.138.1
+uvicorn==0.49.0
+
+# Schemas & config
+pydantic==2.13.4
+python-dotenv==1.2.2
