@@ -3,9 +3,13 @@
 from graph.states import FactCheckState, InternalMapState, OutputMapState
 from model.decomposer import decomposer_model
 from model.judge import judge_model
+from model.schema import ClaimCheck
 from prompts.prompts import DECOMPOSER_PROMPT, JUDGE_PROMPT
 from retrieval.web_search import web_search
 
+import requests
+import time
+import random
 from langchain_core.messages import HumanMessage
 
 # ---- Sub-Graph Nodes ----
@@ -15,10 +19,24 @@ def retrieve_evidence(state: InternalMapState):
 
     sub_claim = state['sub_claim']
 
-    search_results = web_search.invoke(sub_claim)['results']
-    content = "\n".join([result['content'] for result in search_results])
-    
-    return {'retrieved_evidences': [content]}
+    # Error handling - transient-only rety, exp backoff + jitter for fan-out,
+    # graceful degradation to 'insufficient evidence' on exhaustion
+    max_retries = 3
+    for attempt in range(max_retries):
+        try:
+            search_results = web_search.invoke(sub_claim)['results']
+            if len(search_results) == 0:
+                    return {'retrieved_evidences': []}
+            
+            content = "\n".join([result['content'] for result in search_results])
+            
+            return {'retrieved_evidences': [content]}
+        
+        except requests.exceptions.RequestException as err:
+            if attempt < max_retries - 1:
+                time.sleep(2 ** attempt + random.uniform(0, 1))
+                continue
+            return {'retrieved_evidences': []}
 
 
 def judge_claim(state: InternalMapState) -> OutputMapState:
@@ -28,6 +46,14 @@ def judge_claim(state: InternalMapState) -> OutputMapState:
     retrieved_evidences = state['retrieved_evidences']
     retry_count = state['retry_count'] + 1
     
+    if len(retrieved_evidences) == 0:
+        response = ClaimCheck(
+            verdict='insufficient evidence',
+            confidence=1.0
+        )
+        return {'judge_results': [{sub_claim: response}], 'retry_count': retry_count}
+
+
     formatted_prompt = JUDGE_PROMPT.format(sub_claim=sub_claim, evidence=retrieved_evidences[0])
     input_msg = HumanMessage(content=formatted_prompt)
     
