@@ -99,6 +99,13 @@ def aggregate_verdicts(state: FactCheckState):
 
     judge_results = state['judge_results']
 
+    # Fail loud if judge results list is empty
+    if not judge_results:
+        raise ValueError(
+            "aggregate_verdicts received empty judge_results — "
+            "decomposition or the judging fan-out produced no results upstream"
+        )
+
     sum_confidence = 0.0
     verdicts = []
     for result in judge_results:
