@@ -60,7 +60,7 @@ def judge_claim(state: InternalMapState) -> OutputMapState:
     input_msg = HumanMessage(content=formatted_prompt)
     
     try:
-        response = get_judge_model.invoke([input_msg]) # returns verdict, confidence score and grounding sentence (ClaimCheck object)
+        response = get_judge_model().invoke([input_msg]) # returns verdict, confidence score and grounding sentence (ClaimCheck object)
     except (ValidationError, OutputParserException):
         response = ClaimCheck(
             verdict='insufficient evidence',
@@ -89,7 +89,7 @@ def decompose_claim(state: FactCheckState):
     formatted_prompt = DECOMPOSER_PROMPT.format(raw_claim=claim)
     input_msg = HumanMessage(content=formatted_prompt)
     
-    response = get_decomposer_model.invoke([input_msg])
+    response = get_decomposer_model().invoke([input_msg])
     
     return {'sub_claims': response.sub_claims}
 
