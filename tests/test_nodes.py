@@ -1,69 +1,34 @@
 from model.schema import ClaimCheck
-from graph import nodes 
+from graph.nodes import aggregate_verdicts
 import pytest
 from pytest import approx
 
-state_1 = {
-    'judge_results': [
-        {'sub claim 1': ClaimCheck(verdict='refuted', confidence=0.7)},
-        {'sub_claim 2': ClaimCheck(verdict='supported', confidence=0.7)},
-        {'sub_claim 3': ClaimCheck(verdict='supported', confidence=0.7)},
-    ]
-}
 
-state_2 = {
-    'judge_results': [
-        {'sub claim 1': ClaimCheck(verdict='supported', confidence=0.7)},
-        {'sub_claim 2': ClaimCheck(verdict='supported', confidence=0.8)},
-        {'sub_claim 3': ClaimCheck(verdict='supported', confidence=0.9)},
-    ]
-}
+def jr(*verdict_conf):
+    """Build a judge-results list from (verdict, confidence) pairs"""
+    return [{f'sub_claim_{i}': ClaimCheck(verdict=v, confidence=c)}
+            for i, (v, c) in enumerate(verdict_conf)]
 
-state_3 = {
-    'judge_results': [
-        {'sub claim 1': ClaimCheck(verdict='insufficient evidence', confidence=0.7)},
-        {'sub_claim 2': ClaimCheck(verdict='supported', confidence=0.8)},
-        {'sub_claim 3': ClaimCheck(verdict='supported', confidence=0.9)},
-    ]
-}
-
-state_4 = {
-    'judge_results': [
-        {'sub claim 1': ClaimCheck(verdict='insufficient evidence', confidence=0.7)},
-        {'sub_claim 2': ClaimCheck(verdict='supported', confidence=0.8)},
-        {'sub_claim 3': ClaimCheck(verdict='refuted', confidence=0.9)},
-    ]
-}
-
-state_5 = {
-    'judge_results': [
-        {'sub claim 1': ClaimCheck(verdict='insufficient evidence', confidence=0.7)},
-        {'sub_claim 2': ClaimCheck(verdict='supported', confidence=0.7)},
-        {'sub_claim 3': ClaimCheck(verdict='refuted', confidence=70)},
-    ]
-}
-
-state_6 = {
-    'judge_results': []
-}
-
-
-
-def test_one_refuted_dominates():
-    assert nodes.aggregate_verdicts(state_1) == {'verdict': 'refuted', 'confidence': approx(0.7)}
-
-def test_all_supported():
-    assert nodes.aggregate_verdicts(state_2) == {'verdict': 'supported', 'confidence': approx(0.8)}
-
-def test_insufficient_beats_supported():
-    assert nodes.aggregate_verdicts(state_3) == {'verdict': 'insufficient evidence', 'confidence': approx(0.8)}
-
-def test_refuted_beats_insufficient():
-    assert nodes.aggregate_verdicts(state_4) == {'verdict': 'refuted', 'confidence': approx(0.8)}
-
-def test_confidence_rescaling():
-    assert nodes.aggregate_verdicts(state_5) == {'verdict': 'refuted', 'confidence': approx(0.7)}
+@pytest.mark.parametrize("judge_results, expected", [
+    pytest.param(jr(('refuted', 0.7), ('supported', 0.7), ('supported', 0.7)),
+                {'verdict': 'refuted', 'confidence': approx(0.7)},
+                id='one_refuted_dominates'),
+    pytest.param(jr(('supported', 0.7), ('supported', 0.7), ('supported', 0.7)),
+                {'verdict': 'supported', 'confidence': approx(0.7)},
+                id='all_supported'),
+    pytest.param(jr(('insufficient evidence', 0.7), ('supported', 0.7), ('supported', 0.7)),
+                {'verdict': 'insufficient evidence', 'confidence': approx(0.7)},
+                id='insufficient_beats_supported'),
+    pytest.param(jr(('insufficient evidence', 0.7), ('supported', 0.7), ('refuted', 0.7)),
+                {'verdict': 'refuted', 'confidence': approx(0.7)},
+                id='refuted_beats_insufficient'),
+    pytest.param(jr(('insufficient evidence', 0.7), ('supported', 0.7), ('refuted', 70)),
+                {'verdict': 'refuted', 'confidence': approx(0.7)},
+                id='confidence_rescaling'),
+])
+def test_aggregate_verdicts(judge_results, expected):
+    assert aggregate_verdicts({'judge_results': judge_results}) == expected
 
 def test_empty_judge_results_raises():
     with pytest.raises(ValueError):
-        nodes.aggregate_verdicts(state_6)
+        aggregate_verdicts({'judge_results': []})
