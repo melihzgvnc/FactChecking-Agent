@@ -13,7 +13,6 @@ def continue_to_retrieve(state: FactCheckState) -> Literal['sub_graph']:
 def check_confidence(state: FactCheckState) -> Literal['sub_graph', 'aggregate_verdicts']:
     """Check confidence scores of subclaims and retry for those under the threshold"""
     
-    sub_claims = state['sub_claims']
     judge_results = state['judge_results']
     retry_count = state['retry_count']
 
