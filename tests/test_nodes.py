@@ -1,5 +1,6 @@
-from model.schema import ClaimCheck
 from graph.nodes import aggregate_verdicts
+from graph.edges import check_confidence
+from model.schema import ClaimCheck
 import pytest
 from pytest import approx
 
@@ -9,6 +10,7 @@ def jr(*verdict_conf):
     return [{f'sub_claim_{i}': ClaimCheck(verdict=v, confidence=c)}
             for i, (v, c) in enumerate(verdict_conf)]
 
+# Test for aggregate_verdicts
 @pytest.mark.parametrize("judge_results, expected", [
     pytest.param(jr(('refuted', 0.7), ('supported', 0.7), ('supported', 0.7)),
                 {'verdict': 'refuted', 'confidence': approx(0.7)},
