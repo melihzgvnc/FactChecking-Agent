@@ -3,7 +3,7 @@ from dotenv import load_dotenv
 from langchain_openai import ChatOpenAI
 from model.schema import SubClaim
 import openai
-from functools import
+from functools import lru_cache
 
 @lru_cache(maxsize=1)
 def get_decomposer_model():
